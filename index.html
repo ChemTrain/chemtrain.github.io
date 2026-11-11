@@ -30,7 +30,7 @@
 :root {
   --logo-tile: #FFFFFF; --bg: #EDF1F4; --surface: #FFFFFF; --paper: #F6F8FA; --ink: #15212B; --muted: #566472; --line: #D3DBE2;
   --accent: #0D5C78; --accent-ink: #FFFFFF; --accent-soft: #DAEAF1; --good: #1B7548; --good-soft: #DCF0E4;
-  --rail: #9AA8B4; --sleeper: #C9D2DA; --shadow: rgb(21 33 43 / .28);
+  --rail: #9AA8B4; --sleeper: #C9D2DA; --shadow: rgb(21 33 43 / .28); --halo: transparent;
   --a-pka: #2a78d6; --a-rxn: #eb6834; --a-pg: #1baf7a; --a-tmc: #6250d6; --a-rl: #e34948; --a-pr: #0f94a8; --a-rad: #d99a00; --a-beast: #15212B;
   --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
@@ -43,7 +43,7 @@
   :root:not([data-theme="light"]) {
     --logo-tile: #E6ECF0; --bg: #0D1318; --surface: #151D24; --paper: #10171D; --ink: #E4EBF0; --muted: #94A3B0; --line: #27333D;
     --accent: #5DB7D5; --accent-ink: #08212B; --accent-soft: #173341; --good: #5FC88F; --good-soft: #143224;
-    --rail: #5B6B78; --sleeper: #2C3943; --shadow: rgb(0 0 0 / .55);
+    --rail: #5B6B78; --sleeper: #2C3943; --shadow: rgb(0 0 0 / .55); --halo: rgb(230 236 240 / .2);
     --a-pka: #3987e5; --a-rxn: #d95926; --a-pg: #199e70; --a-tmc: #9085e9; --a-rl: #e66767; --a-pr: #1f9fb3; --a-rad: #c98500; --a-beast: #E4EBF0;
     color-scheme: dark;
   }
@@ -51,7 +51,7 @@
 :root[data-theme="dark"] {
   --logo-tile: #E6ECF0; --bg: #0D1318; --surface: #151D24; --paper: #10171D; --ink: #E4EBF0; --muted: #94A3B0; --line: #27333D;
   --accent: #5DB7D5; --accent-ink: #08212B; --accent-soft: #173341; --good: #5FC88F; --good-soft: #143224;
-  --rail: #5B6B78; --sleeper: #2C3943; --shadow: rgb(0 0 0 / .55);
+  --rail: #5B6B78; --sleeper: #2C3943; --shadow: rgb(0 0 0 / .55); --halo: rgb(230 236 240 / .2);
   --a-pka: #3987e5; --a-rxn: #d95926; --a-pg: #199e70; --a-tmc: #9085e9; --a-rl: #e66767; --a-pr: #1f9fb3; --a-rad: #c98500; --a-beast: #E4EBF0;
   color-scheme: dark;
 }
@@ -92,9 +92,10 @@ h1 .soft { display: block; color: var(--muted); font-weight: 500; }
 .hero-art { position: relative; display: grid; place-items: center; min-height: 190px; }
 @media (max-width: 879px) { .hero-art { order: -1; min-height: 176px; } }
 @media (min-width: 880px) { .hero-art { min-height: 420px; } }
-.hero-tile { position: relative; z-index: 1; padding: 20px 24px; background: var(--logo-tile); border: 1px solid var(--line); border-radius: 30px; box-shadow: 0 24px 50px -28px var(--shadow); }
-.hero-tile img { display: block; width: 100px; height: auto; }
-@media (min-width: 880px) { .hero-tile { padding: 34px 40px; border-radius: 44px; } .hero-tile img { width: 200px; } }
+.hero-tile { position: relative; z-index: 1; padding: 20px 24px; }
+.hero-tile img { display: block; width: 100px; height: auto; filter: drop-shadow(0 16px 18px var(--shadow)); }
+@media (min-width: 880px) { .hero-tile { padding: 34px 40px; } .hero-tile img { width: 200px; } }
+.hero-tile::before, #ct-loading .ct-tile::before { content: ""; position: absolute; inset: -4%; z-index: -1; border-radius: 50%; background: radial-gradient(closest-side, var(--halo), transparent); }
 .float { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); color: var(--c); opacity: 0; transition: opacity 1.2s ease; }
 .float svg { display: block; width: 100%; height: 100%; animation: drift var(--d) ease-in-out infinite alternate; }
 .ready .float { opacity: .7; }
@@ -171,15 +172,15 @@ h2 { margin: 0; font: 700 clamp(28px, 4.6vw, 42px)/1.06 var(--f-display); letter
 .s-daily .st-card:hover .st-go { background: var(--accent); color: var(--accent-ink); }
 .js .station { opacity: 0; transform: translateX(28px); transition: opacity .55s ease, transform .55s cubic-bezier(.2,.7,.2,1); }
 .js .station.in { opacity: 1; transform: none; }
-.train { position: absolute; left: calc(var(--rx) - 23px); top: -23px; z-index: 3; width: 46px; height: 46px; pointer-events: none; will-change: transform; opacity: 0; transition: opacity .4s ease; }
+.train { position: absolute; left: calc(var(--rx) - 17px); top: -36px; z-index: 3; width: 34px; height: 72px; pointer-events: none; will-change: transform; opacity: 0; transition: opacity .4s ease; }
 .line.in .train { opacity: 1; }
-.train .tile { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 13px; background: var(--logo-tile); border: 1px solid var(--line); box-shadow: 0 8px 18px -8px var(--shadow); }
-.train .logo { width: 27px; height: 38px; }
-.train.moving .tile { animation: chug .32s ease-in-out infinite alternate; }
-@keyframes chug { from { transform: rotate(-4deg) translateY(-1px); } to { transform: rotate(4deg) translateY(1px); } }
-.puff { position: absolute; z-index: 2; width: 16px; height: 16px; margin: -8px 0 0 -8px; pointer-events: none; animation: puff 1.5s ease-out forwards; }
+.train .loco { display: block; width: 100%; height: 100%; overflow: visible; transition: transform .5s cubic-bezier(.4,0,.2,1); filter: drop-shadow(0 4px 5px var(--shadow)); }
+.train.up .loco { transform: rotate(180deg); }
+.train.moving .body { animation: chug .12s linear infinite alternate; }
+@keyframes chug { from { transform: translateX(-.4px); } to { transform: translateX(.4px); } }
+.puff { position: absolute; z-index: 4; pointer-events: none; animation: puff 1.6s ease-out forwards; }
 .puff svg { display: block; width: 100%; height: 100%; }
-@keyframes puff { from { opacity: .95; transform: scale(.4) rotate(0deg); } to { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.25) rotate(var(--r)); } }
+@keyframes puff { from { opacity: .95; transform: scale(.35) rotate(0deg); } to { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.7) rotate(var(--r)); } }
 .line-end { max-width: 760px; margin: 18px auto 0; padding-left: var(--gap); color: var(--muted); font-size: 14px; }
 @media (min-width: 1000px) {
   .line { display: grid; grid-template-columns: 300px minmax(0, 1fr); column-gap: 56px; align-items: start; }
@@ -230,8 +231,8 @@ h2 { margin: 0; font: 700 clamp(28px, 4.6vw, 42px)/1.06 var(--f-display); letter
 #ct-loading { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; }
 #ct-loading .ct-bg { position: absolute; inset: 0; background: var(--bg); }
 #ct-loading .ct-ld { position: relative; display: grid; justify-items: center; gap: 16px; }
-#ct-loading .ct-tile { padding: 20px 24px; background: var(--logo-tile); border: 1px solid var(--line); border-radius: 30px; box-shadow: 0 24px 50px -28px var(--shadow); }
-#ct-loading .ct-tile img { display: block; width: 120px; height: auto; }
+#ct-loading .ct-tile { position: relative; z-index: 0; padding: 20px 24px; }
+#ct-loading .ct-tile img { display: block; width: 120px; height: auto; filter: drop-shadow(0 16px 18px var(--shadow)); }
 #ct-loading .ct-cap { font: 700 22px/1 var(--f-display); letter-spacing: -.01em; animation: blink 1.6s ease-in-out infinite; }
 @keyframes blink { 50% { opacity: .45; } }
 #ct-loading.ct-done { opacity: 0; transition: opacity .35s ease; }
@@ -293,11 +294,22 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
     <div class="line-head">
       <p class="eyebrow">The line</p>
       <h2 id="line-h">Every app, one stop at a time</h2>
-      <p class="section-lede">Start with the daily quiz, then ride on: the apps come in the order an organic chemist needs them most. Each shows how many of its cards you have mastered.</p>
+      <p class="section-lede">Start with the daily quiz, then ride on.</p>
     </div>
     <div class="rail-wrap" id="rail-wrap">
       <div class="rail" aria-hidden="true"><i class="rail-fill"></i></div>
-      <div class="train" aria-hidden="true"><div class="tile"><svg class="logo" viewBox="0 0 54.89 76.62" aria-hidden="true"><use href="#ct-logo"/></svg></div></div>
+      <div class="train" aria-hidden="true"><svg class="loco" viewBox="0 0 34 72"><g class="body">
+        <rect x="5" y="4" width="24" height="62" rx="2" fill="#808285"/>
+        <path d="M7.6 25v31M26.4 25v31" stroke="#f4900c" stroke-width="1.8" stroke-linecap="round"/>
+        <rect x="10" y="18" width="14" height="46" rx="7" fill="#414042"/>
+        <path d="M10 57a7 7 0 0 0 14 0z" fill="#231f20"/>
+        <rect x="10" y="31" width="14" height="2.4" fill="#c1694f"/><rect x="10" y="41" width="14" height="2.4" fill="#c1694f"/>
+        <circle cx="17" cy="36.7" r="3" fill="#6d6e71"/>
+        <circle cx="17" cy="52" r="4.6" fill="#6d6e71"/><circle cx="17" cy="52" r="2.9" fill="#231f20"/>
+        <rect x="4" y="2" width="26" height="20" rx="3" fill="#a0041e"/><rect x="7" y="5" width="20" height="14" rx="2" fill="#be1931"/>
+        <rect x="9.5" y="10.5" width="15" height="3" rx="1.5" fill="#ea596e"/>
+        <rect x="6" y="64" width="22" height="3" rx="1" fill="#a0041e"/><path d="M7 67h20l-5 4.5H12z" fill="#dd2e44"/>
+      </g></svg></div>
       <ol class="stations">
 <li class="station s-daily" data-id="daily">
   <span class="stop" aria-hidden="true"></span>
@@ -560,6 +572,7 @@ function ride() {
   stations.forEach((s, i) => s.classList.toggle('lit', stops[i] <= y + 2));
   if (lastY !== null && Math.abs(y - lastY) > 0.5) {
     const up = y < lastY;
+    train.classList.toggle('up', up);
     if (!reduce) {
       train.classList.add('moving');
       clearTimeout(stopTimer); stopTimer = setTimeout(() => train.classList.remove('moving'), 220);
@@ -569,13 +582,13 @@ function ride() {
   lastY = y;
 }
 function puff(y, up) {
-  // smoke from the chimney, at the tile's top left; it drifts away behind the train and out to the left
+  // seen from above, the smoke leaves the chimney near the front and drifts back over the train as it rises
   const p = document.createElement('span');
   p.className = 'puff';
   p.innerHTML = BENZENE;
   const s = 12 + Math.random() * 8;
-  p.style.cssText = `left: calc(var(--rx) - 10px); top: ${y + (up ? 6 : -16)}px; width: ${s}px; height: ${s}px; color: hsl(${HUES[hue++ % HUES.length]} 80% 55%);`
-    + `--dx: ${-(8 + Math.random() * 18)}px; --dy: ${(up ? 1 : -1) * (24 + Math.random() * 22)}px; --r: ${Math.random() * 180 - 90}deg`;
+  p.style.cssText = `left: var(--rx); top: ${y + (up ? -16 : 16)}px; width: ${s}px; height: ${s}px; margin: ${-s / 2}px 0 0 ${-s / 2}px; color: hsl(${HUES[hue++ % HUES.length]} 80% 55%);`
+    + `--dx: ${(Math.random() - .5) * 28}px; --dy: ${(up ? 1 : -1) * (30 + Math.random() * 28)}px; --r: ${Math.random() * 180 - 90}deg`;
   wrap.appendChild(p);
   p.addEventListener('animationend', () => p.remove());
 }
