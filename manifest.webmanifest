@@ -1,0 +1,77 @@
+{
+ "id": "/",
+ "name": "ChemTrain",
+ "short_name": "ChemTrain",
+ "description": "Learn chemistry, one card at a time: named reactions, pKa, protecting groups, metal complexes, radicals, photoredox and reactivity, with a daily quiz. Works offline.",
+ "start_url": "/",
+ "scope": "/",
+ "display": "standalone",
+ "orientation": "any",
+ "background_color": "#EDF1F4",
+ "theme_color": "#EDF1F4",
+ "categories": [
+  "education"
+ ],
+ "icons": [
+  {
+   "src": "/icons/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "/icons/icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "/icons/maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ],
+ "shortcuts": [
+  {
+   "name": "Today's quiz",
+   "url": "/chemtrain-daily/chemtrain_daily.html",
+   "icons": [
+    {
+     "src": "/icons/icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  },
+  {
+   "name": "Beast mode",
+   "url": "/chemtrain-daily/chemtrain_daily.html#beast",
+   "icons": [
+    {
+     "src": "/icons/icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  },
+  {
+   "name": "Reaction Learn",
+   "url": "/reaction-learn/reaction_learn.html",
+   "icons": [
+    {
+     "src": "/icons/icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  },
+  {
+   "name": "pKa Learn",
+   "url": "/pka-learn/pka_learn.html",
+   "icons": [
+    {
+     "src": "/icons/icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  }
+ ]
+}
