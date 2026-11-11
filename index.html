@@ -226,6 +226,8 @@ h2 { margin: 0; font: 700 clamp(28px, 4.6vw, 42px)/1.06 var(--f-display); letter
 /* ---------- footer ---------- */
 .foot { margin-top: 56px; padding: 26px 0 max(32px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; display: grid; gap: 6px; }
 .foot p { margin: 0; }
+.foot .credits { color: var(--ink); font-weight: 600; font-size: 15px; }
+.foot .fine { font-size: 12px; }
 
 /* ---------- loading screen ---------- */
 #ct-loading { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; }
@@ -364,7 +366,7 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
 <li class="station s-tmc" data-id="tmc">
   <span class="stop" aria-hidden="true"></span>
   <a class="st-card" href="/tmc-learn/tmc_learn.html">
-    <span class="st-body"><span class="st-kicker">Stop 6 · by Francesco Sala</span>
+    <span class="st-body"><span class="st-kicker">Stop 6</span>
       <span class="st-name">TMC Learn</span>
       <span class="st-about">Electron counting, oxidation states, dⁿ and shapes of transition-metal complexes.</span>
       <span class="st-prog" data-src="[[&quot;tmc1.levels&quot;, &quot;levels&quot;, 246]]"><span class="bar" aria-hidden="true"><i class="m"></i><i class="l"></i></span><span class="st-txt">246 cards</span></span></span>
@@ -461,8 +463,8 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
   </section>
 
   <footer class="foot">
-    <p>ChemTrain is made in the Schoenebeck Group at RWTH Aachen. The apps are by Quentin P. Bindschaedler; TMC Learn is by Francesco Sala.</p>
-    <p>Code under MIT, content under CC BY 4.0: each app's page on <a href="https://github.com/ChemTrain" target="_blank" rel="noopener">GitHub</a> says how to cite it. The locomotive is adapted from <a href="https://github.com/jdecked/twemoji" target="_blank" rel="noopener">Twemoji</a> (CC BY 4.0).</p>
+    <p class="credits">Quentin P. Bindschaedler and Francesco Sala</p>
+    <p class="fine">Code MIT · content CC BY 4.0 · locomotive adapted from <a href="https://github.com/jdecked/twemoji" target="_blank" rel="noopener">Twemoji</a> (CC BY 4.0) · <a href="https://github.com/ChemTrain" target="_blank" rel="noopener">GitHub</a></p>
   </footer>
 </div>
 

@@ -13,7 +13,7 @@ The page lists every app as a stop on one rail line and shows today's ChemTrain 
 | 3 | [Reaction Learn](https://chemtrain.github.io/reaction-learn/reaction_learn.html) | Named reactions and reagents |
 | 4 | [pKa Learn](https://chemtrain.github.io/pka-learn/pka_learn.html) | pKa values and the most acidic proton |
 | 5 | [PG Learn](https://chemtrain.github.io/pg-learn/pg_learn.html) | Protecting groups and how to remove them |
-| 6 | [TMC Learn](https://chemtrain.github.io/tmc-learn/tmc_learn.html) (by Francesco Sala) | Electron counting and transition-metal complexes |
+| 6 | [TMC Learn](https://chemtrain.github.io/tmc-learn/tmc_learn.html) | Electron counting and transition-metal complexes |
 | 7 | [Radical Learn](https://chemtrain.github.io/radical-learn/radical_learn.html) | Radical philicity, polarity matching, regioselectivity |
 | 8 | [Photoredox Learn](https://chemtrain.github.io/photoredox-learn/photoredox_learn.html) | Redox potentials and photoredox cycles |
 | 9 | [Reactivity Learn](https://chemtrain.github.io/reactivity-learn/reactivity_learn.html) | Mayr nucleophilicity and electrophilicity (Nu/E) |
@@ -40,3 +40,5 @@ All of these are built by `home/build.py` in the ChemTrain sources, so don't edi
 - Code (the HTML, CSS and JavaScript): [MIT](LICENSE).
 - Each app's content is under CC BY 4.0, and each app's repo says how to cite it.
 - Logo and loading screen: the locomotive is adapted from [Twemoji](https://github.com/jdecked/twemoji), © Twitter, Inc and other contributors, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The benzene-ring smoke was added for ChemTrain.
+
+By Quentin P. Bindschaedler and Francesco Sala.
