@@ -228,6 +228,14 @@ h2 { margin: 0; font: 700 clamp(28px, 4.6vw, 42px)/1.06 var(--f-display); letter
 .foot p { margin: 0; }
 .foot .credits { color: var(--ink); font-weight: 600; font-size: 15px; }
 
+/* ---------- ranking ---------- */
+.rank { margin: 56px auto 0; max-width: 1000px; padding: clamp(20px, 4vw, 40px); display: grid; gap: 26px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 24px; scroll-margin-top: 16px; }
+@media (min-width: 880px) { .rank { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px; } }
+.rank p { margin: 12px 0 0; color: var(--muted); }
+.rank #rank-main { margin-top: 22px; }
+.rank-you { padding: 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; }
+.rank-you p { margin: 0; }
+
 /* ---------- loading screen ---------- */
 #ct-loading { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; }
 #ct-loading .ct-bg { position: absolute; inset: 0; background: var(--bg); }
@@ -246,6 +254,173 @@ html:not(.js) #ct-loading { display: none; }
   .js .rail { transform: none; }
 }
 </style>
+<script>
+/* How a ChemTrain account's saved data merges across devices. Shared by the pages (inlined by shared/frame.py,
+   which drops the export line) and the server (net/src/worker.js imports it).
+
+   A synced document maps a localStorage key to { v: its value, t: when that device last changed it }. */
+
+// What to do with a key: skip it, keep the newer value (lww), keep the higher number per entry (max), keep every
+// entry (union), or keep the play with more answers (progress).
+function KIND(k) {
+  if (!/^(pka2|rxn|pg|tmc1|rl|rad|pr|ctd)\./.test(k)) return 'skip';                    // not an app's record
+  if (/\.round\.|\.pt$|^ctd\.past\.|^ctd\.set$/.test(k)) return 'skip';                 // a round or set under way, an open panel
+  if (/^ctd\.daily\./.test(k)) return 'progress';                                        // a Daily quiz: its questions and answers
+  if (/\.levels(\.|$)|\.seen$|^(ctd\.history|ctd\.late|ctd\.beast|pg\.plan|pg\.removed|rxn\.which|pka2\.acidic|tmc1\.named)$/.test(k)) return 'max';
+  if (/\.stars$/.test(k)) return 'union';                                                // starred cards
+  return 'lww';                                                                          // settings, picks, custom cards
+}
+
+const isObj = v => v && typeof v === 'object' && !Array.isArray(v);
+
+// one key: the record kept when `a` (what is stored) meets `b` (what arrives)
+function mergeRec(kind, a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  const newer = (b.t || 0) >= (a.t || 0) ? b : a, older = newer === b ? a : b, t = Math.max(a.t || 0, b.t || 0);
+  if (kind === 'max' && isObj(a.v) && isObj(b.v)) {
+    const v = { ...older.v, ...newer.v };
+    for (const k of Object.keys(v)) {
+      const x = a.v[k], y = b.v[k];
+      if (typeof x === 'number' && typeof y === 'number') v[k] = Math.max(x, y);
+    }
+    return { v, t };
+  }
+  if (kind === 'union') {
+    if (Array.isArray(a.v) && Array.isArray(b.v)) return { v: [...new Set([...a.v, ...b.v])], t };
+    if (isObj(a.v) && isObj(b.v)) return { v: { ...older.v, ...newer.v }, t };
+  }
+  if (kind === 'progress' && isObj(a.v) && isObj(b.v)) {
+    const na = Array.isArray(a.v.answers) ? a.v.answers.length : 0, nb = Array.isArray(b.v.answers) ? b.v.answers.length : 0;
+    return na === nb ? { v: newer.v, t } : na > nb ? { v: a.v, t } : { v: b.v, t };
+  }
+  return { v: newer.v, t };
+}
+
+// the stored document after `changes` from a device
+function mergeDocs(doc, changes) {
+  const out = { ...doc };
+  for (const [k, rec] of Object.entries(changes || {})) {
+    const kind = KIND(k);
+    if (kind === 'skip' || !rec || !('v' in rec)) continue;
+    out[k] = mergeRec(kind, out[k], { v: rec.v, t: Number(rec.t) || 0 });
+  }
+  return out;
+}
+
+
+
+/* ChemTrain's account on this device, and its progress kept in step across devices. Inlined into every ChemTrain
+   page by shared/frame.py, right after sync_rules.js (which gives KIND), before the page's own script.
+
+   An account is { id, key, pseudo } under localStorage 'ct.account'. Without one, nothing here does anything.
+   With one, the page's saved records (see KIND) go to the server and the other devices' changes come back:
+   at load, when the page is hidden, when the connection returns, and every minute while something changed.
+   The server merges (shared/sync_rules.js) and answers with the whole document, which is written back here.
+   A change that arrives after the page has started, before anything was touched, reloads it once. */
+(function () {
+  'use strict';
+  const DEFAULT_API = 'https://api.chemtrain.workers.dev';
+  const json = k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
+  const save = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const API = json('ct.api') || DEFAULT_API;
+  const account = () => json('ct.account');
+
+  async function api(path, body, opts) {
+    const init = body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), ...opts } : { method: 'GET' };
+    const r = await fetch(API + path, init);
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(d.error || 'HTTP ' + r.status), { status: r.status, code: d.error || 'http_' + r.status });
+    return d;
+  }
+  const authed = (path, body, opts) => { const a = account(); return a ? api(path, { key: a.key, ...body }, opts) : Promise.reject(Object.assign(new Error('no account'), { code: 'no_account' })); };
+
+  /* ---------- progress across devices ---------- */
+  const hash = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = (h * 33 + s.charCodeAt(i)) | 0; return h.toString(36); };
+  function keysToSync() {
+    const cut = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10), out = [];  // Daily quizzes: the last 60 days
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i), kind = KIND(k);
+      if (kind === 'skip' || (kind === 'progress' && k.slice('ctd.daily.'.length) < cut)) continue;
+      out.push(k);
+    }
+    return out;
+  }
+  function localChanges() {
+    const snap = json('ct.sync.snap') || {}, changes = {}, now = Date.now();
+    for (const k of keysToSync()) {
+      const raw = localStorage.getItem(k);
+      if (raw == null || snap[k] === hash(raw)) continue;
+      try { changes[k] = { v: JSON.parse(raw), t: now }; } catch (e) {}
+    }
+    return changes;
+  }
+  let booted = document.readyState !== 'loading', touched = false, busy = null;
+  document.addEventListener('DOMContentLoaded', () => { booted = true; });
+  for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, () => { touched = true; }, { capture: true, once: true });
+
+  function sync(opts) {
+    const a = account();
+    if (!a || busy) return busy || Promise.resolve([]);
+    busy = (async () => {
+      const changes = localChanges(), body = { changes, have: json('ct.sync.updated') || 0 };
+      const text = JSON.stringify(body), init = opts && opts.leaving && text.length < 60000 ? { keepalive: true } : undefined;
+      const res = await authed('/sync', body, init);
+      const snap = json('ct.sync.snap') || {}, changed = [];
+      if (res.doc) {
+        for (const [k, rec] of Object.entries(res.doc)) {
+          if (KIND(k) === 'skip') continue;
+          const raw = JSON.stringify(rec.v);
+          if (localStorage.getItem(k) !== raw) { localStorage.setItem(k, raw); changed.push(k); }
+          snap[k] = hash(raw);
+        }
+        save('ct.sync.updated', res.updated);
+      }
+      save('ct.sync.snap', snap); save('ct.sync.at', Date.now());
+      if (changed.length) {
+        dispatchEvent(new CustomEvent('ct-sync', { detail: { changed } }));
+        if (booted && !touched && !document.hidden && !(opts && opts.noReload)) location.reload();
+      }
+      return changed;
+    })().catch(() => []).finally(() => { busy = null; });
+    return busy;
+  }
+  const dirty = () => Object.keys(localChanges()).length > 0;
+
+  /* ---------- Daily scores ---------- */
+  // today's score goes up when there is an account; otherwise it waits for one
+  async function submitScore(day, score, total) {
+    const pend = json('ct.score.pending') || {}; pend[day] = { score, total }; save('ct.score.pending', pend);
+    return account() ? flushScores() : null;
+  }
+  async function flushScores() {
+    if (!account()) return null;
+    const pend = json('ct.score.pending') || {}; let last = null;
+    for (const day of Object.keys(pend)) {
+      try { last = await authed('/score', { day, ...pend[day] }); delete pend[day]; save('ct.score.' + day, last); }
+      catch (e) { if (e.status === 400) delete pend[day]; }
+    }
+    save('ct.score.pending', pend);
+    return last;
+  }
+  const scoreOf = day => json('ct.score.' + day);
+
+  /* ---------- the account ---------- */
+  function setAccount(a) { save('ct.account', a); save('ct.sync.snap', null); save('ct.sync.updated', null); }
+  async function join(pseudo) { const r = await api('/join', { pseudo }); setAccount(r); await Promise.all([sync({ noReload: true }), flushScores()]); return r; }
+  async function login(key) { const r = await api('/login', { key }); setAccount({ id: r.id, key: String(key).toUpperCase().replace(/[^0-9A-Z]/g, '').replace(/O/g, '0').replace(/[IL]/g, '1').match(/.{1,4}/g).join('-'), pseudo: r.pseudo }); await Promise.all([sync({ noReload: true }), flushScores()]); return r; }
+  async function rename(pseudo) { const r = await authed('/pseudo', { pseudo }); save('ct.account', { ...account(), pseudo: r.pseudo }); return r; }
+  function logout() { for (const k of ['ct.account', 'ct.sync.snap', 'ct.sync.updated', 'ct.sync.at']) save(k, null); }
+  async function remove() { await authed('/delete', {}); logout(); }
+
+  addEventListener('visibilitychange', () => { if (document.hidden) sync({ leaving: true }); });
+  addEventListener('online', () => { sync(); flushScores(); });
+  setInterval(() => { if (account() && !document.hidden && dirty()) sync(); }, 60000);
+
+  window.CT = { API, api, authed, account, join, login, logout, rename, remove, sync, submitScore, flushScores, scoreOf, KIND, hash };
+  if (account()) { sync(); if (Object.keys(json('ct.score.pending') || {}).length) flushScores(); }
+})();
+</script>
 </head>
 <body>
 <script>document.documentElement.classList.add('js', 'loading');
@@ -259,6 +434,7 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
     <nav class="toplinks" aria-label="Page">
       <span class="netchip" id="netchip" hidden>Offline</span>
       <a class="wide" href="#line">Apps</a>
+      <a class="wide" href="#rank">Ranking</a>
       <a class="wide" href="https://github.com/ChemTrain" target="_blank" rel="noopener">GitHub</a>
       <a class="chip install-link" id="install-top" href="#install">Install</a>
     </nav>
@@ -407,6 +583,16 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
     <p class="line-end">End of the line. More apps are on the way.</p>
   </section>
 
+  <section class="rank" id="rank" aria-labelledby="rank-h">
+    <div class="rank-board">
+      <p class="eyebrow">Compete</p>
+      <h2 id="rank-h">Who rode furthest today?</h2>
+      <p>Everyone gets the same Daily quiz. Pick a pseudo and your scores join the boards: today, this week, this month, all time. Make a group to race your friends or your class.</p>
+      <div id="rank-main"></div>
+    </div>
+    <div class="rank-you" id="rank-side"></div>
+  </section>
+
   <section class="install" id="install" aria-labelledby="install-h">
     <div>
       <p class="eyebrow">On your phone</p>
@@ -415,8 +601,8 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
       <p class="installed-msg">You are using the installed ChemTrain. Every app is kept on this device, so it works without internet.</p>
       <ul class="perks">
         <li>Every app and the daily quiz, offline (about 22 MB)</li>
-        <li>Free: no account, no ads, nothing to sign up for</li>
-        <li>Your progress is saved on your device, not on a server</li>
+        <li>Free, no ads; a pseudo is optional</li>
+        <li>Your progress stays on your device, unless you pick a pseudo and let it follow you</li>
         <li>Updates arrive by themselves when you are online</li>
       </ul>
     </div>
@@ -466,6 +652,244 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
   </footer>
 </div>
 
+<style>
+/* the ranking and the account card (shared/rank.js); the page's own --colours and .btn/.tabs/.eyebrow */
+.ct-card { display: grid; gap: 12px; }
+.ct-card.ct-busy { opacity: .7; pointer-events: none; }
+.ct-p { margin: 0; color: var(--muted); font-size: 14px; }
+.ct-form { display: flex; flex-wrap: wrap; gap: 8px; }
+.ct-form .btn { flex: none; }
+.ct-in { flex: 1 1 150px; min-width: 0; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font: inherit; font-size: 15px; }
+.ct-in:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ct-in.mono { font-family: var(--f-mono); font-size: 14px; letter-spacing: .04em; text-transform: uppercase; }
+.ct-in.mono::placeholder { text-transform: none; letter-spacing: 0; }
+.ct-more summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--accent); list-style-position: inside; }
+.ct-more > :not(summary) { margin-top: 10px; }
+.ct-code { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--paper); border: 1px dashed var(--line); font: 600 17px/1.3 var(--f-mono); letter-spacing: .06em; text-align: center; user-select: all; -webkit-user-select: all; white-space: pre-wrap; }
+.ct-link { border: 0; background: none; padding: 0; font: inherit; font-size: 14px; font-weight: 600; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.ct-link.danger { color: var(--bad, #AD2A20); }
+.ct-who { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; font-size: 18px; }
+.ct-invite { padding: 12px 14px; border-radius: 10px; background: var(--accent-soft); display: grid; gap: 8px; font-size: 14px; color: var(--ink); }
+.ct-groups { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ct-groups li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); font-size: 14px; }
+.ct-groups li small { display: block; color: var(--muted); font-size: 12px; }
+.ct-members { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px 14px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13px; }
+.ct-members[hidden] { display: none; }
+.ct-row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.ct-msg { margin: 0; min-height: 1.2em; font-size: 14px; font-weight: 600; color: var(--good); }
+.ct-msg.err { color: var(--bad, #AD2A20); }
+.ct-fine { margin: 0; font-size: 13px; color: var(--muted); }
+.ct-fine .ct-link { font-size: 13px; font-weight: 500; }
+.ct-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.ct-tabs { width: fit-content; max-width: 100%; }
+.ct-sel { padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-weight: 600; font-size: 14px; max-width: 100%; }
+.ct-board { width: 100%; border-collapse: collapse; font-size: 15px; }
+.ct-board th { text-align: left; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.ct-board td { padding: 10px; border-bottom: 1px solid var(--line); }
+.ct-board td small { color: var(--muted); font-weight: 500; }
+.ct-board .num { text-align: right; font-variant-numeric: tabular-nums; }
+.ct-board .rk { width: 2.6em; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ct-board .m { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; font-weight: 800; }
+.ct-board .m1 { background: #F2C14E; color: #3B2A00; }
+.ct-board .m2 { background: #CBD3DA; color: #243038; }
+.ct-board .m3 { background: #D9955B; color: #3A1D08; }
+.ct-board tr.me td { background: var(--accent-soft); font-weight: 700; }
+.ct-board tr.me td:first-child { border-radius: 8px 0 0 8px; }
+.ct-board tr.me td:last-child { border-radius: 0 8px 8px 0; }
+.ct-board tr.gap td { text-align: center; color: var(--muted); padding: 4px; border: 0; }
+.ct-foot { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.ct-empty { margin: 0; padding: 22px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; font-size: 14px; }
+.ct-account { margin-bottom: 18px; padding: 16px; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; }
+.ct-rankline { margin: 0; font-size: 15px; }
+</style>
+<script>
+/* The ranking: boards for today, this week, this month and all time, for everyone or for a group of friends, and
+   the account card (pseudo, the code for another device, groups). Shown by ChemTrain Daily (its Ranking tab) and the
+   home page; inlined after net.js by shared/frame.py, with rank.css.
+
+   CT.rankUI({ main, side, day }) renders the board into `main` and the account card into `side` (or above the
+   board when there is no side). Calling it again re-renders and refreshes. An invite link ends in #group=CODE. */
+(function () {
+  'use strict';
+  const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const json = k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } };
+  const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+  const HOME = 'https://chemtrain.github.io/';
+  const PERIODS = [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['all', 'All time']];
+  const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const MSG = {
+    pseudo_taken: 'That pseudo is taken; try another.', bad_pseudo: 'A pseudo is 2 to 20 letters, digits, spaces, _ . \' or -, and stays polite.',
+    bad_key: 'A code has 16 letters and digits, like XXXX-XXXX-XXXX-XXXX.', no_user: 'No pseudo has this code. Check it and try again.',
+    no_group: 'No group has this code.', group_full: 'That group is full.', bad_name: 'A group name is 2 to 30 characters.',
+    too_many_groups: 'You already run ten groups.', not_owner: 'Only the group\'s owner can do that.', no_account: 'Pick a pseudo first.',
+  };
+  const why = e => MSG[e && e.code] || (e && e.status ? 'The ranking server is not answering. Try again later.'
+    : window.top !== window ? 'The ranking cannot be reached from inside this frame. Open ChemTrain at chemtrain.github.io.' : 'You seem to be offline. Try again when you are back online.');
+
+  const S = { main: null, side: null, day: null, period: 'today', scope: 'all', groups: null, boards: {}, invite: null, busy: false };
+  const view = json('ct.rank.view'); if (view) { S.period = view.period || 'today'; S.scope = view.scope || 'all'; }
+
+  function inviteFromHash() {
+    const m = /[#&]group=([0-9A-Za-z]{6})\b/.exec(location.hash);
+    return m ? m[1].toUpperCase() : null;
+  }
+
+  /* ---------- the account card ---------- */
+  function accountHTML() {
+    const a = CT.account();
+    if (!a) return `<div class="ct-card">
+      <p class="eyebrow">Join the ranking</p>
+      ${S.invite ? `<div class="ct-invite">You are invited to <b>${esc(S.invite.name)}</b>${S.invite.n ? ` (${plural(S.invite.n, 'member')})` : ''}. Pick a pseudo and you are in.</div>` : ''}
+      <p class="ct-p">Pick a pseudo: your Daily scores join the boards, and your progress in every app follows you to your other devices. No account, no email.</p>
+      <form class="ct-form" data-form="join"><input class="ct-in" name="pseudo" maxlength="20" placeholder="Your pseudo" autocomplete="nickname" required><button type="submit" class="btn">Join</button></form>
+      <details class="ct-more"><summary>I already have a code</summary>
+        <p class="ct-p">The code is under "Use ChemTrain on another device" where you first joined.</p>
+        <form class="ct-form" data-form="login"><input class="ct-in mono" name="key" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" required><button type="submit" class="btn ghost">Link this device</button></form></details>
+      <p class="ct-msg" role="status" aria-live="polite"></p></div>`;
+    const groups = S.groups || [];
+    const invite = S.invite && !groups.some(g => g.code === S.invite.code)
+      ? `<div class="ct-invite">You are invited to <b>${esc(S.invite.name)}</b>${S.invite.n ? ` (${plural(S.invite.n, 'member')})` : ''}.<div class="ct-row"><button type="button" class="btn small" data-act="accept">Join ${esc(S.invite.name)}</button><button type="button" class="ct-link" data-act="dismiss">No thanks</button></div></div>` : '';
+    return `<div class="ct-card">
+      <p class="eyebrow">You</p>
+      <p class="ct-who"><b>${esc(a.pseudo)}</b><button type="button" class="ct-link" data-act="rename">change</button></p>
+      ${invite}
+      <details class="ct-more"><summary>Use ChemTrain on another device</summary>
+        <p class="ct-p">On the other device, open the ranking, choose "I already have a code" and type this one. Your scores and progress then follow you. It is the only key to your pseudo, so keep it somewhere safe.</p>
+        <pre class="ct-code">${esc(a.key)}</pre>
+        <div class="ct-row"><button type="button" class="btn ghost small" data-act="copy-code">Copy the code</button><span class="ct-msg" data-msg="code"></span></div></details>
+      <p class="eyebrow">Groups</p>
+      ${groups.length ? `<ul class="ct-groups">${groups.map(g => `<li><span><b>${esc(g.name)}</b><small>${plural(g.n, 'member')} · code ${esc(g.code)}</small></span>
+        <span class="ct-row"><button type="button" class="ct-link" data-act="invite" data-code="${esc(g.code)}">Invite link</button>${g.mine ? `<button type="button" class="ct-link" data-act="members" data-code="${esc(g.code)}">Members</button>` : ''}<button type="button" class="ct-link" data-act="leave" data-code="${esc(g.code)}" data-name="${esc(g.name)}">${g.mine ? 'Close' : 'Leave'}</button></span>
+        <div class="ct-members" data-members="${esc(g.code)}" hidden></div></li>`).join('')}</ul>`
+        : '<p class="ct-p">Race your friends or your class: make a group and share its link, or join one with its code.</p>'}
+      <form class="ct-form" data-form="group"><input class="ct-in" name="name" maxlength="30" placeholder="A name for your group" required><button type="submit" class="btn ghost small">Create</button></form>
+      <form class="ct-form" data-form="joingroup"><input class="ct-in mono" name="code" maxlength="7" placeholder="Group code" autocomplete="off" spellcheck="false" required><button type="submit" class="btn ghost small">Join</button></form>
+      <p class="ct-msg" role="status" aria-live="polite"></p>
+      <p class="ct-fine"><button type="button" class="ct-link" data-act="logout">Sign out on this device</button> · <button type="button" class="ct-link danger" data-act="delete">Delete my pseudo and scores</button></p></div>`;
+  }
+
+  /* ---------- the board ---------- */
+  function barHTML() {
+    const groups = S.groups || [];
+    if (S.scope !== 'all' && !groups.some(g => g.code === S.scope)) S.scope = 'all';
+    return `<div class="ct-bar"><div class="tabs ct-tabs" role="tablist" aria-label="Period">${PERIODS.map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === S.period}" data-period="${k}">${l}</button>`).join('')}</div>
+      ${groups.length ? `<select class="ct-sel" data-scope aria-label="Who"><option value="all"${S.scope === 'all' ? ' selected' : ''}>Everyone</option>${groups.map(g => `<option value="${esc(g.code)}"${S.scope === g.code ? ' selected' : ''}>${esc(g.name)}</option>`).join('')}</select>` : ''}</div>
+      <div class="ct-boardwrap" aria-live="polite"></div>`;
+  }
+  function boardHTML(b) {
+    const a = CT.account(), today = S.period === 'today';
+    const pts = r => today ? `${r.points}<small> / ${r.total}</small>` : String(r.points);
+    const medal = r => r.rank <= 3 ? `<b class="m m${r.rank}">${r.rank}</b>` : r.rank;  // gold, silver, bronze: no emoji, so every device shows them
+    const row = r => `<tr${r.me ? ' class="me"' : ''}><td class="rk">${medal(r)}</td><td>${esc(r.pseudo)}${r.me ? ' <small>(you)</small>' : ''}</td><td class="num">${pts(r)}</td>${today ? '' : `<td class="num">${r.days}</td>`}</tr>`;
+    let rows = b.rows.map(row).join('');
+    if (b.me && !b.rows.some(r => r.me)) rows += `<tr class="gap"><td colspan="${today ? 3 : 4}">…</td></tr>` + row({ ...b.me, pseudo: a ? a.pseudo : 'you', me: true });
+    const scopeName = S.scope === 'all' ? '' : ' in ' + esc((S.groups.find(g => g.code === S.scope) || {}).name || 'this group');
+    const when = { today: 'today', week: 'this week', month: 'this month', all: 'so far' }[S.period];
+    if (!b.rows.length) return `<p class="ct-empty">${S.scope === 'all' ? `Nobody has a score ${when} yet. ` : `Nobody in this group has a score ${when} yet. `}${a ? 'Play today\'s quiz to be the first.' : 'Pick a pseudo and play today\'s quiz to be the first.'}</p>`;
+    const you = b.me ? `You are <b>${ordinal(b.me.rank)}</b>${scopeName}.` : a ? `No score of yours ${when}${scopeName}.` : '';
+    return `<table class="ct-board"><thead><tr><th class="rk">#</th><th>Pseudo</th><th class="num">${today ? 'Score' : 'Points'}</th>${today ? '' : '<th class="num">Days</th>'}</tr></thead><tbody>${rows}</tbody></table>
+      <p class="ct-foot">${plural(b.n, 'player')} ${when}${scopeName}. ${you}</p>`;
+  }
+  async function loadBoard() {
+    const wrap = S.main.querySelector('.ct-boardwrap');
+    if (!wrap) return;
+    const a = CT.account(), key = `${S.period}|${S.scope}|${S.day}`;
+    if (S.boards[key]) wrap.innerHTML = boardHTML(S.boards[key]); else wrap.innerHTML = '<p class="ct-empty">Loading the ranking…</p>';
+    try {
+      const b = await CT.api(`/board?period=${S.period}&day=${S.day}${S.scope !== 'all' ? '&group=' + S.scope : ''}${a ? '&me=' + encodeURIComponent(a.id) : ''}`);
+      S.boards[key] = b;
+      if (S.main.querySelector('.ct-boardwrap') === wrap) wrap.innerHTML = boardHTML(b);
+    } catch (e) {
+      if (!S.boards[key]) wrap.innerHTML = `<p class="ct-empty">${esc(why(e))}</p>`;
+    }
+  }
+
+  /* ---------- rendering ---------- */
+  function sideEl() { return S.side || S.main.querySelector('.ct-account'); }
+  function renderAccount() { const el = sideEl(); if (el) el.innerHTML = accountHTML(); }
+  function render() {
+    S.main.innerHTML = (S.side ? '' : '<div class="ct-account"></div>') + barHTML();
+    renderAccount();
+    loadBoard();
+  }
+  async function refreshGroups() {
+    if (!CT.account()) { S.groups = []; return; }
+    try { const me = await CT.authed('/me', {}); S.groups = me.groups || []; if (me.pseudo !== CT.account().pseudo) save('ct.account', { ...CT.account(), pseudo: me.pseudo }); }
+    catch (e) { if (e.code === 'no_user') { CT.logout(); S.groups = []; } else if (!S.groups) S.groups = []; }
+  }
+  const msgEl = (el, name) => name ? el.querySelector(`[data-msg="${name}"]`) : el.querySelector('.ct-msg:not([data-msg])');
+  function say(el, text, err) { const m = msgEl(el); if (m) { m.textContent = text; m.classList.toggle('err', !!err); } }
+  function copy(text, el, name) {
+    const done = () => { const m = msgEl(el, name); if (m) { m.textContent = 'Copied.'; m.classList.remove('err'); } };
+    try { navigator.clipboard.writeText(text).then(done, () => prompt('Copy this:', text)); } catch (e) { prompt('Copy this:', text); }
+  }
+
+  async function act(fn, el) {
+    if (S.busy) return;
+    S.busy = true; el.classList.add('ct-busy');
+    try { await fn(); } catch (e) { say(el, why(e), true); }
+    finally { S.busy = false; el.classList.remove('ct-busy'); }
+  }
+  async function afterSignIn(el) {
+    if (S.invite) { try { await CT.authed('/group/join', { code: S.invite.code }); } catch (e) {} S.invite = null; }
+    await refreshGroups(); S.boards = {}; render();
+    const n = Object.keys(json('ct.score.pending') || {}).length;
+    say(sideEl(), n ? 'Your score is on the board.' : 'Welcome aboard. Your progress now follows you.');
+  }
+  function onSubmit(e) {
+    const f = e.target.closest('form[data-form]'); if (!f) return;
+    e.preventDefault();
+    const el = f.closest('.ct-card'), v = n => (f.elements[n].value || '').trim();
+    if (f.dataset.form === 'join') act(async () => { await CT.join(v('pseudo')); await afterSignIn(el); }, el);
+    else if (f.dataset.form === 'login') act(async () => { await CT.login(v('key')); await afterSignIn(el); }, el);
+    else if (f.dataset.form === 'group') act(async () => { const g = await CT.authed('/group', { name: v('name') }); await refreshGroups(); S.scope = g.code; keepView(); S.boards = {}; render(); say(sideEl(), `${g.name} is ready: send its invite link to your friends.`); }, el);
+    else if (f.dataset.form === 'joingroup') act(async () => { const g = await CT.authed('/group/join', { code: v('code') }); await refreshGroups(); S.scope = g.code; keepView(); S.boards = {}; render(); say(sideEl(), `You joined ${g.name}.`); }, el);
+  }
+  function onClick(e) {
+    const t = e.target.closest('button, select'); if (!t) return;
+    if (t.dataset.period) { S.period = t.dataset.period; keepView(); S.main.querySelectorAll('[data-period]').forEach(b => b.setAttribute('aria-selected', String(b === t))); loadBoard(); return; }
+    const el = t.closest('.ct-card'); if (!el || !t.dataset.act) return;
+    const a = CT.account(), code = t.dataset.code, act_ = t.dataset.act;
+    if (act_ === 'copy-code') copy(a.key, el, 'code');
+    else if (act_ === 'invite') copy(`${HOME}#group=${code}`, el);
+    else if (act_ === 'rename') { const p = prompt('Your new pseudo:', a.pseudo); if (p && p.trim() !== a.pseudo) act(async () => { await CT.rename(p); S.boards = {}; render(); say(sideEl(), 'Renamed.'); }, el); }
+    else if (act_ === 'accept') act(async () => { const g = await CT.authed('/group/join', { code: S.invite.code }); S.invite = null; await refreshGroups(); S.scope = g.code; keepView(); S.boards = {}; render(); say(sideEl(), `You joined ${g.name}.`); }, el);
+    else if (act_ === 'dismiss') { S.invite = null; renderAccount(); }
+    else if (act_ === 'leave') { const g = S.groups.find(x => x.code === code); if (confirm(g && g.mine ? `Close ${t.dataset.name}? Its members lose the group.` : `Leave ${t.dataset.name}?`)) act(async () => { await CT.authed('/group/leave', { code }); await refreshGroups(); S.boards = {}; render(); }, el); }
+    else if (act_ === 'members') act(async () => {
+      const box = el.querySelector(`[data-members="${code}"]`); if (!box) return;
+      if (!box.hidden) { box.hidden = true; return; }
+      const r = await CT.authed('/group/members', { code });
+      box.innerHTML = r.members.map(m => `<span class="ct-member">${esc(m.pseudo)}${m.pseudo === a.pseudo ? '' : ` <button type="button" class="ct-link danger" data-act="kick" data-code="${esc(code)}" data-pseudo="${esc(m.pseudo)}">remove</button>`}</span>`).join('');
+      box.hidden = false;
+    }, el);
+    else if (act_ === 'kick') { if (confirm(`Remove ${t.dataset.pseudo} from the group?`)) act(async () => { await CT.authed('/group/kick', { code, pseudo: t.dataset.pseudo }); await refreshGroups(); S.boards = {}; render(); }, el); }
+    else if (act_ === 'logout') { if (confirm('Sign out on this device? Your progress stays here, and your pseudo and code still work.')) { CT.logout(); S.groups = []; S.boards = {}; render(); } }
+    else if (act_ === 'delete') { if (confirm('Delete your pseudo, your scores and your groups from the server? Your progress on this device stays. This cannot be undone.')) act(async () => { await CT.remove(); S.groups = []; S.boards = {}; render(); say(sideEl(), 'Deleted.'); }, el); }
+  }
+  function onChange(e) { const s = e.target.closest('select[data-scope]'); if (s) { S.scope = s.value; keepView(); loadBoard(); } }
+  const keepView = () => save('ct.rank.view', { period: S.period, scope: S.scope });
+
+  let wired = false;
+  function wire(el) { el.addEventListener('submit', onSubmit); el.addEventListener('click', onClick); el.addEventListener('change', onChange); }
+
+  async function rankUI(o) {
+    S.main = o.main; S.side = o.side || null; S.day = o.day;
+    if (!wired) { wire(S.main); if (S.side) wire(S.side); wired = true; }
+    const code = inviteFromHash();
+    if (code && !(S.invite && S.invite.code === code)) {
+      S.invite = { code, name: 'a group', n: 0 };
+      CT.api('/group/' + code).then(g => { S.invite = { code: g.code, name: g.name, n: g.n }; renderAccount(); }, () => { S.invite = null; renderAccount(); });
+    }
+    if (S.groups === null) { render(); await refreshGroups(); }
+    render();
+  }
+  addEventListener('ct-sync', () => { if (S.main) S.boards = {}; });
+  window.CT.rankUI = rankUI;
+  window.CT.ordinal = ordinal;
+})();
+</script>
 <script>
 const DATA = {"firstDay": "2026-10-21", "daily": "/chemtrain-daily/chemtrain_daily.html", "pages": ["/chemtrain-daily/chemtrain_daily.html", "/reaction-learn/reaction_learn.html", "/pka-learn/pka_learn.html", "/pg-learn/pg_learn.html", "/tmc-learn/tmc_learn.html", "/radical-learn/radical_learn.html", "/photoredox-learn/photoredox_learn.html", "/reactivity-learn/reactivity_learn.html"], "size": "22 MB"};
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
@@ -739,6 +1163,10 @@ if (sw) {
     if (n < PAGES.length || !at || Date.now() - at > 864e5) saveAll();
   });
 }
+
+/* ---------- ranking (shared/rank.js) ---------- */
+if (window.CT && CT.rankUI) CT.rankUI({ main: $('#rank-main'), side: $('#rank-side'), day: today });
+if (/[#&]group=/.test(location.hash)) requestAnimationFrame(() => $('#rank').scrollIntoView());
 </script>
 </body>
 </html>

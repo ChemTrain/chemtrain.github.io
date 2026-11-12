@@ -24,7 +24,7 @@ The page lists every app as a stop on one rail line and shows today's ChemTrain 
 - **Android:** open it in Chrome and tap **Install**, or open the menu ⋮ and choose **Install app**.
 - **Computer:** in Chrome or Edge, click the install icon in the address bar. In Safari on a Mac, choose **File → Add to Dock**.
 
-The installed app saves every app on the device (about 22 MB) and works offline. It updates itself when online. Progress stays on the device; on iPhone the installed app keeps its own progress, apart from Safari's.
+The installed app saves every app on the device (about 22 MB) and works offline. It updates itself when online. Progress stays on the device; on iPhone the installed app keeps its own progress, apart from Safari's. Pick a pseudo under **Ranking** and your Daily scores join the boards (today, this week, this month, all time; everyone or a group of friends) and your progress in every app follows you to your other devices through a 16-character code. No email, no password: the server (a Cloudflare Worker, source in `chemtrain-src/net`) keeps the pseudo, the scores and the synced progress, nothing else.
 
 ## What is in this repo
 
