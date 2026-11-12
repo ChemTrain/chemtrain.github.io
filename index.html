@@ -92,7 +92,7 @@ h1 .soft { display: block; color: var(--muted); font-weight: 500; }
 .hero-art { position: relative; display: grid; place-items: center; min-height: 190px; }
 @media (max-width: 879px) { .hero-art { order: -1; min-height: 176px; } }
 @media (min-width: 880px) { .hero-art { min-height: 420px; } }
-.hero-tile { position: relative; z-index: 1; padding: 20px 24px; }
+.hero-tile { position: relative; z-index: 1; padding: 17px 20px; }  /* the loader tile's proportions, so the flight lands without a jump */
 .hero-tile img { display: block; width: 100px; height: auto; filter: drop-shadow(0 16px 18px var(--shadow)); }
 @media (min-width: 880px) { .hero-tile { padding: 34px 40px; } .hero-tile img { width: 200px; } }
 .hero-tile::before, #ct-loading .ct-tile::before { content: ""; position: absolute; inset: -4%; z-index: -1; border-radius: 50%; background: radial-gradient(closest-side, var(--halo), transparent); }
@@ -616,18 +616,25 @@ if ('IntersectionObserver' in window && !reduce) {
 /* ---------- loading screen: the train flies into the hero tile ---------- */
 function firstVisit() { try { if (sessionStorage.getItem('ct.seen')) return false; sessionStorage.setItem('ct.seen', '1'); } catch (e) {} return true; }
 function leave() {
-  const ld = $('#ct-loading');
+  const ld = $('#ct-loading'), target = $('.hero-tile');
   root.classList.add('ready');
-  const finish = () => { root.classList.remove('loading'); ld && ld.remove(); measure(); };
+  const finish = () => { root.classList.remove('loading'); target.style.cssText = ''; ld && ld.remove(); measure(); };
   if (!ld) return finish();
-  const tile = ld.querySelector('.ct-tile'), target = $('.hero-tile');
-  const a = tile.getBoundingClientRect(), b = target.getBoundingClientRect();
-  if (reduce || !tile.animate || b.bottom < 0 || b.top > innerHeight) {
+  const tile = ld.querySelector('.ct-tile'), from = tile.querySelector('img'), to = target.querySelector('img');
+  const a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
+  if (reduce || !target.animate || b.bottom < 0 || b.top > innerHeight) {
     ld.classList.add('ct-done'); setTimeout(finish, 360); return;
   }
-  const s = b.width / a.width, dx = b.left + b.width / 2 - (a.left + a.width / 2), dy = b.top + b.height / 2 - (a.top + a.height / 2);
-  const fly = tile.animate([{ transform: 'none' }, { transform: `translate(${dx}px, ${dy}px) scale(${s})` }],
-    { duration: 820, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' });
+  // The hero tile flies from the loader's place to its own, so nothing is swapped when it lands. It carries the
+  // loader's own picture, so the smoke goes on from the same frame.
+  tile.style.width = tile.offsetWidth + 'px'; tile.style.height = tile.offsetHeight + 'px'; tile.style.visibility = 'hidden';
+  from.width = to.width; from.height = to.height; to.replaceWith(from);
+  target.style.visibility = 'visible'; target.style.zIndex = 1001;
+  const s = a.width / b.width, dx = a.left + a.width / 2 - (b.left + b.width / 2), dy = a.top + a.height / 2 - (b.top + b.height / 2);
+  const ease = 'cubic-bezier(.65,0,.35,1)', shadow = getComputedStyle(root).getPropertyValue('--shadow').trim();
+  const fly = target.animate([{ transform: `translate(${dx}px, ${dy}px) scale(${s})` }, { transform: 'none' }], { duration: 820, easing: ease });
+  // the drop shadow keeps the loader's size on screen while the tile grows
+  from.animate([{ filter: `drop-shadow(0 ${16 / s}px ${18 / s}px ${shadow})` }, { filter: `drop-shadow(0 16px 18px ${shadow})` }], { duration: 820, easing: ease });
   ld.querySelector('.ct-cap').animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(10px)' }], { duration: 250, fill: 'forwards' });
   ld.querySelector('.ct-bg').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 650, delay: 120, easing: 'ease', fill: 'forwards' });
   fly.finished.then(finish, finish);
