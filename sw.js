@@ -1,4 +1,4 @@
-/* ChemTrain service worker (built by chemtrain-src/home/build.py; version bffab9066ef5).
+/* ChemTrain service worker (built by chemtrain-src/home/build.py; version 52c031a26247).
 
    It keeps the home page and every app on the device, so the installed web app works without internet.
    - Pages (the home page and the apps): the network first, so an update shows as soon as the device is online; the
@@ -7,12 +7,12 @@
    - The fonts: the saved copy first.
    - "save-all" (sent by the home page): download every app now, telling the page how far it got.
    Everything else on chemtrain.github.io is left to the browser. */
-const VERSION = 'bffab9066ef5';
+const VERSION = '52c031a26247';
 const SHELL = 'ct-shell-' + VERSION;  // the manifest and icons of this version
 const PAGES = 'ct-pages';             // the home page and the apps, kept across versions
 const FONTS = 'ct-fonts';
 const HOME = '/';
-const APPS = ["/chemtrain-daily/chemtrain_daily.html", "/reaction-learn/reaction_learn.html", "/pka-learn/pka_learn.html", "/pg-learn/pg_learn.html", "/tmc-learn/tmc_learn.html", "/radical-learn/radical_learn.html", "/photoredox-learn/photoredox_learn.html", "/reactivity-learn/reactivity_learn.html"];
+const APPS = ["/chemtrain-daily/chemtrain_daily.html", "/reaction-learn/reaction_learn.html", "/pka-learn/pka_learn.html", "/pg-learn/pg_learn.html", "/tmc-learn/tmc_learn.html", "/radical-learn/radical_learn.html", "/photoredox-learn/photoredox_learn.html", "/reactivity-learn/reactivity_learn.html", "/ranking/"];
 const KEEP = new Set([HOME, ...APPS]);
 const SHELL_FILES = ['/manifest.webmanifest', '/loader.svg', '/icons/favicon.svg', '/icons/icon-192.png',
   '/icons/icon-512.png', '/icons/maskable-512.png', '/icons/apple-touch-icon.png'];

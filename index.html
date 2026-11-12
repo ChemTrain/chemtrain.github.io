@@ -232,9 +232,10 @@ h2 { margin: 0; font: 700 clamp(28px, 4.6vw, 42px)/1.06 var(--f-display); letter
 .rank { margin: 56px auto 0; max-width: 1000px; padding: clamp(20px, 4vw, 40px); display: grid; gap: 26px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 24px; scroll-margin-top: 16px; }
 @media (min-width: 880px) { .rank { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px; } }
 .rank p { margin: 12px 0 0; color: var(--muted); }
-.rank #rank-main { margin-top: 22px; }
-.rank-you { padding: 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; }
-.rank-you p { margin: 0; }
+.rank .row { margin-top: 22px; }
+.rank-mini { padding: 16px 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 16px; }
+.rank-mini p { margin: 0; }
+.rank-mini .ct-foot { margin-top: 10px; }
 
 /* ---------- loading screen ---------- */
 #ct-loading { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; }
@@ -393,8 +394,21 @@ function mergeDocs(doc, changes) {
     const pend = json('ct.score.pending') || {}; pend[day] = { score, total }; save('ct.score.pending', pend);
     return account() ? flushScores() : null;
   }
+  // a Daily played before there was a pseudo, or seen from another page: today's and yesterday's scores from the Daily's records
+  function queueFromHistory() {
+    const hist = json('ctd.history') || {}, pend = json('ct.score.pending') || {};
+    let added = false;
+    for (const [day, score] of Object.entries(hist)) {
+      if (pend[day] || json('ct.score.' + day) || typeof score !== 'number') continue;
+      if (Math.abs(Date.parse(day + 'T12:00:00Z') - Date.now()) > 36 * 3600e3) continue;
+      const rec = json('ctd.daily.' + day), total = rec && Array.isArray(rec.q) && rec.q.length ? rec.q.length : 15;
+      pend[day] = { score, total }; added = true;
+    }
+    if (added) save('ct.score.pending', pend);
+  }
   async function flushScores() {
     if (!account()) return null;
+    queueFromHistory();
     const pend = json('ct.score.pending') || {}; let last = null;
     for (const day of Object.keys(pend)) {
       try { last = await authed('/score', { day, ...pend[day] }); delete pend[day]; save('ct.score.' + day, last); }
@@ -418,9 +432,10 @@ function mergeDocs(doc, changes) {
   setInterval(() => { if (account() && !document.hidden && dirty()) sync(); }, 60000);
 
   window.CT = { API, api, authed, account, join, login, logout, rename, remove, sync, submitScore, flushScores, scoreOf, KIND, hash };
-  if (account()) { sync(); if (Object.keys(json('ct.score.pending') || {}).length) flushScores(); }
+  if (account()) { sync(); flushScores(); }
 })();
 </script>
+<script>if (/[#&]group=/.test(location.hash)) location.replace('/ranking/' + location.hash);</script>
 </head>
 <body>
 <script>document.documentElement.classList.add('js', 'loading');
@@ -434,7 +449,7 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
     <nav class="toplinks" aria-label="Page">
       <span class="netchip" id="netchip" hidden>Offline</span>
       <a class="wide" href="#line">Apps</a>
-      <a class="wide" href="#rank">Ranking</a>
+      <a class="wide" href="/ranking/">Ranking</a>
       <a class="wide" href="https://github.com/ChemTrain" target="_blank" rel="noopener">GitHub</a>
       <a class="chip install-link" id="install-top" href="#install">Install</a>
     </nav>
@@ -584,13 +599,13 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
   </section>
 
   <section class="rank" id="rank" aria-labelledby="rank-h">
-    <div class="rank-board">
+    <div>
       <p class="eyebrow">Compete</p>
       <h2 id="rank-h">Who rode furthest today?</h2>
-      <p>Everyone gets the same Daily quiz. Pick a pseudo and your scores join the boards: today, this week, this month, all time. Make a group to race your friends or your class.</p>
-      <div id="rank-main"></div>
+      <p>Everyone gets the same Daily quiz. Pick a pseudo and your scores join the boards: today, this week, this month, all time, for everyone or for a group of friends. Your progress in every app follows your pseudo to your other devices.</p>
+      <div class="row"><a class="btn" href="/ranking/"><span>Open the ranking</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a></div>
     </div>
-    <div class="rank-you" id="rank-side"></div>
+    <div class="rank-mini" id="rank-mini" aria-label="Today's top five"></div>
   </section>
 
   <section class="install" id="install" aria-labelledby="install-h">
@@ -700,6 +715,14 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
 .ct-foot { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
 .ct-empty { margin: 0; padding: 22px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; font-size: 14px; }
 .ct-account { margin-bottom: 18px; padding: 16px; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; }
+/* the booklet: everyone, then one tab per group */
+.ct-books { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px; padding: 0 12px; }
+.ct-books button { position: relative; top: 1px; max-width: 14em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid var(--line); border-bottom-color: transparent; background: var(--paper); color: var(--muted); padding: 9px 16px; border-radius: 12px 12px 0 0; font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
+.ct-books button:hover { color: var(--ink); }
+.ct-books button[aria-selected="true"] { z-index: 1; background: var(--surface); color: var(--ink); border-bottom-color: var(--surface); box-shadow: inset 0 3px 0 var(--accent); }
+.ct-books .ct-addbook { border-style: dashed; background: transparent; }
+.ct-book { position: relative; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.ct-mini td { padding: 8px 10px; }
 .ct-rankline { margin: 0; font-size: 15px; }
 </style>
 <script>
@@ -770,12 +793,28 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
   }
 
   /* ---------- the board ---------- */
+  // a booklet: one tab for everyone and one per group, the periods inside
   function barHTML() {
     const groups = S.groups || [];
     if (S.scope !== 'all' && !groups.some(g => g.code === S.scope)) S.scope = 'all';
-    return `<div class="ct-bar"><div class="tabs ct-tabs" role="tablist" aria-label="Period">${PERIODS.map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === S.period}" data-period="${k}">${l}</button>`).join('')}</div>
-      ${groups.length ? `<select class="ct-sel" data-scope aria-label="Who"><option value="all"${S.scope === 'all' ? ' selected' : ''}>Everyone</option>${groups.map(g => `<option value="${esc(g.code)}"${S.scope === g.code ? ' selected' : ''}>${esc(g.name)}</option>`).join('')}</select>` : ''}</div>
-      <div class="ct-boardwrap" aria-live="polite"></div>`;
+    const book = (v, l) => `<button type="button" role="tab" aria-selected="${v === S.scope}" data-scope="${esc(v)}" title="${esc(l)}">${esc(l)}</button>`;
+    return `<div class="ct-books" role="tablist" aria-label="Who">${book('all', 'Everyone')}${groups.map(g => book(g.code, g.name)).join('')}
+        ${CT.account() ? '<button type="button" class="ct-addbook" data-act="newgroup" title="Make a group for your friends or your class">+ Group</button>' : ''}</div>
+      <div class="ct-book"><div class="tabs ct-tabs" role="tablist" aria-label="Period">${PERIODS.map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === S.period}" data-period="${k}">${l}</button>`).join('')}</div>
+      <div class="ct-boardwrap" aria-live="polite"></div></div>`;
+  }
+  // the home page's glimpse: today's top five and your place
+  async function miniBoard(el, o) {
+    const a = CT.account();
+    const render = (b, err) => {
+      if (!b) { el.innerHTML = `<p class="ct-empty">${esc(why(err))}</p>`; return; }
+      const rows = b.rows.slice(0, 5).map(r => `<tr${r.me ? ' class="me"' : ''}><td class="rk">${r.rank <= 3 ? `<b class="m m${r.rank}">${r.rank}</b>` : r.rank}</td><td>${esc(r.pseudo)}${r.me ? ' <small>(you)</small>' : ''}</td><td class="num">${r.points}<small> / ${r.total}</small></td></tr>`).join('');
+      const you = b.me ? `You are <b>${ordinal(b.me.rank)}</b> today.` : a ? 'No score of yours today yet.' : '';
+      el.innerHTML = `<p class="eyebrow">Today</p>${b.rows.length ? `<table class="ct-board ct-mini"><tbody>${rows}</tbody></table>` : '<p class="ct-empty">Nobody has a score today yet. Be the first.</p>'}
+        <p class="ct-foot">${plural(b.n, 'player')} today. ${you}</p>`;
+    };
+    el.innerHTML = '<p class="ct-empty">Loading today\'s ranking…</p>';
+    try { render(await CT.api(`/board?period=today&day=${o.day}${a ? '&me=' + encodeURIComponent(a.id) : ''}`)); } catch (e) { render(null, e); }
   }
   function boardHTML(b) {
     const a = CT.account(), today = S.period === 'today';
@@ -849,10 +888,16 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
   function onClick(e) {
     const t = e.target.closest('button, select'); if (!t) return;
     if (t.dataset.period) { S.period = t.dataset.period; keepView(); S.main.querySelectorAll('[data-period]').forEach(b => b.setAttribute('aria-selected', String(b === t))); loadBoard(); return; }
+    if (t.dataset.scope !== undefined) { S.scope = t.dataset.scope; keepView(); S.main.querySelectorAll('[data-scope]').forEach(b => b.setAttribute('aria-selected', String(b === t))); loadBoard(); return; }
+    if (t.dataset.act === 'newgroup') {
+      const i = (S.side || S.main).querySelector('[data-form="group"] input');
+      if (i) { i.scrollIntoView({ block: 'center', behavior: 'smooth' }); i.focus({ preventScroll: true }); }
+      return;
+    }
     const el = t.closest('.ct-card'); if (!el || !t.dataset.act) return;
     const a = CT.account(), code = t.dataset.code, act_ = t.dataset.act;
     if (act_ === 'copy-code') copy(a.key, el, 'code');
-    else if (act_ === 'invite') copy(`${HOME}#group=${code}`, el);
+    else if (act_ === 'invite') copy(`${HOME}ranking/#group=${code}`, el);
     else if (act_ === 'rename') { const p = prompt('Your new pseudo:', a.pseudo); if (p && p.trim() !== a.pseudo) act(async () => { await CT.rename(p); S.boards = {}; render(); say(sideEl(), 'Renamed.'); }, el); }
     else if (act_ === 'accept') act(async () => { const g = await CT.authed('/group/join', { code: S.invite.code }); S.invite = null; await refreshGroups(); S.scope = g.code; keepView(); S.boards = {}; render(); say(sideEl(), `You joined ${g.name}.`); }, el);
     else if (act_ === 'dismiss') { S.invite = null; renderAccount(); }
@@ -887,6 +932,7 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
   }
   addEventListener('ct-sync', () => { if (S.main) S.boards = {}; });
   window.CT.rankUI = rankUI;
+  window.CT.miniBoard = miniBoard;
   window.CT.ordinal = ordinal;
 })();
 </script>
@@ -1164,9 +1210,8 @@ if (sw) {
   });
 }
 
-/* ---------- ranking (shared/rank.js) ---------- */
-if (window.CT && CT.rankUI) CT.rankUI({ main: $('#rank-main'), side: $('#rank-side'), day: today });
-if (/[#&]group=/.test(location.hash)) requestAnimationFrame(() => $('#rank').scrollIntoView());
+/* ---------- ranking: today's top five here; the boards and the account live on /ranking/ (shared/rank.js) ---------- */
+if (window.CT && CT.miniBoard) CT.miniBoard($('#rank-mini'), { day: today });
 </script>
 </body>
 </html>

@@ -54,6 +54,16 @@
    ]
   },
   {
+   "name": "Ranking",
+   "url": "/ranking/",
+   "icons": [
+    {
+     "src": "/icons/icon-192.png",
+     "sizes": "192x192"
+    }
+   ]
+  },
+  {
    "name": "Reaction Learn",
    "url": "/reaction-learn/reaction_learn.html",
    "icons": [
