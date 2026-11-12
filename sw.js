@@ -1,4 +1,4 @@
-/* ChemTrain service worker (built by chemtrain-src/home/build.py; version b766b9e8e23a).
+/* ChemTrain service worker (built by chemtrain-src/home/build.py; version 316d6ff16fa9).
 
    It keeps the home page and every app on the device, so the installed web app works without internet.
    - Pages (the home page and the apps): the network first, so an update shows as soon as the device is online; the
@@ -7,7 +7,7 @@
    - The fonts: the saved copy first.
    - "save-all" (sent by the home page): download every app now, telling the page how far it got.
    Everything else on chemtrain.github.io is left to the browser. */
-const VERSION = 'b766b9e8e23a';
+const VERSION = '316d6ff16fa9';
 const SHELL = 'ct-shell-' + VERSION;  // the manifest and icons of this version
 const PAGES = 'ct-pages';             // the home page and the apps, kept across versions
 const FONTS = 'ct-fonts';
