@@ -13,10 +13,11 @@ The page lists every app as a stop on one rail line and shows today's ChemTrain 
 | 3 | [Reaction Learn](https://chemtrain.github.io/reaction-learn/reaction_learn.html) | Named reactions and reagents |
 | 4 | [pKa Learn](https://chemtrain.github.io/pka-learn/pka_learn.html) | pKa values and the most acidic proton |
 | 5 | [PG Learn](https://chemtrain.github.io/pg-learn/pg_learn.html) | Protecting groups and how to remove them |
-| 6 | [TMC Learn](https://chemtrain.github.io/tmc-learn/tmc_learn.html) | Electron counting and transition-metal complexes |
-| 7 | [Radical Learn](https://chemtrain.github.io/radical-learn/radical_learn.html) | Radical philicity, polarity matching, regioselectivity |
-| 8 | [Photoredox Learn](https://chemtrain.github.io/photoredox-learn/photoredox_learn.html) | Redox potentials and photoredox cycles |
-| 9 | [Reactivity Learn](https://chemtrain.github.io/reactivity-learn/reactivity_learn.html) | Mayr nucleophilicity and electrophilicity (Nu/E) |
+| 6 | [Amino Acid Learn](https://chemtrain.github.io/amino-acid-learn/amino_acid_learn.html) | Amino acid structures, names, codes, charge and class |
+| 7 | [TMC Learn](https://chemtrain.github.io/tmc-learn/tmc_learn.html) | Electron counting and transition-metal complexes |
+| 8 | [Radical Learn](https://chemtrain.github.io/radical-learn/radical_learn.html) | Radical philicity, polarity matching, regioselectivity |
+| 9 | [Photoredox Learn](https://chemtrain.github.io/photoredox-learn/photoredox_learn.html) | Redox potentials and photoredox cycles |
+| 10 | [Reactivity Learn](https://chemtrain.github.io/reactivity-learn/reactivity_learn.html) | Mayr nucleophilicity and electrophilicity (Nu/E) |
 
 ## Installing ChemTrain
 
