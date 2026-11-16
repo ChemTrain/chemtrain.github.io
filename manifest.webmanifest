@@ -2,7 +2,7 @@
  "id": "/",
  "name": "ChemTrain",
  "short_name": "ChemTrain",
- "description": "Learn chemistry, one card at a time: named reactions, pKa, protecting groups, metal complexes, radicals, photoredox and reactivity, with a daily quiz. Works offline.",
+ "description": "Learn chemistry, one card at a time: named reactions, pKa, protecting groups, metal complexes, amino acids, radicals, photoredox and reactivity, with a daily quiz. Works offline.",
  "start_url": "/",
  "scope": "/",
  "display": "standalone",
