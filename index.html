@@ -31,7 +31,7 @@
   --logo-tile: #FFFFFF; --bg: #EDF1F4; --surface: #FFFFFF; --paper: #F6F8FA; --ink: #15212B; --muted: #566472; --line: #D3DBE2;
   --accent: #0D5C78; --accent-ink: #FFFFFF; --accent-soft: #DAEAF1; --good: #1B7548; --good-soft: #DCF0E4;
   --rail: #9AA8B4; --sleeper: #C9D2DA; --shadow: rgb(21 33 43 / .28); --halo: transparent;
-  --a-pka: #2a78d6; --a-rxn: #eb6834; --a-pg: #1baf7a; --a-tmc: #6250d6; --a-rl: #e34948; --a-pr: #0f94a8; --a-rad: #d99a00; --a-beast: #15212B;
+  --a-pka: #2a78d6; --a-rxn: #eb6834; --a-pg: #1baf7a; --a-tmc: #6250d6; --a-rl: #e34948; --a-pr: #0f94a8; --a-rad: #d99a00; --a-aa: #c2418a; --a-beast: #15212B;
   --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -44,7 +44,7 @@
     --logo-tile: #E6ECF0; --bg: #0D1318; --surface: #151D24; --paper: #10171D; --ink: #E4EBF0; --muted: #94A3B0; --line: #27333D;
     --accent: #5DB7D5; --accent-ink: #08212B; --accent-soft: #173341; --good: #5FC88F; --good-soft: #143224;
     --rail: #5B6B78; --sleeper: #2C3943; --shadow: rgb(0 0 0 / .55); --halo: rgb(230 236 240 / .2);
-    --a-pka: #3987e5; --a-rxn: #d95926; --a-pg: #199e70; --a-tmc: #9085e9; --a-rl: #e66767; --a-pr: #1f9fb3; --a-rad: #c98500; --a-beast: #E4EBF0;
+    --a-pka: #3987e5; --a-rxn: #d95926; --a-pg: #199e70; --a-tmc: #9085e9; --a-rl: #e66767; --a-pr: #1f9fb3; --a-rad: #c98500; --a-aa: #d9579f; --a-beast: #E4EBF0;
     color-scheme: dark;
   }
 }
@@ -52,7 +52,7 @@
   --logo-tile: #E6ECF0; --bg: #0D1318; --surface: #151D24; --paper: #10171D; --ink: #E4EBF0; --muted: #94A3B0; --line: #27333D;
   --accent: #5DB7D5; --accent-ink: #08212B; --accent-soft: #173341; --good: #5FC88F; --good-soft: #143224;
   --rail: #5B6B78; --sleeper: #2C3943; --shadow: rgb(0 0 0 / .55); --halo: rgb(230 236 240 / .2);
-  --a-pka: #3987e5; --a-rxn: #d95926; --a-pg: #199e70; --a-tmc: #9085e9; --a-rl: #e66767; --a-pr: #1f9fb3; --a-rad: #c98500; --a-beast: #E4EBF0;
+  --a-pka: #3987e5; --a-rxn: #d95926; --a-pg: #199e70; --a-tmc: #9085e9; --a-rl: #e66767; --a-pr: #1f9fb3; --a-rad: #c98500; --a-aa: #d9579f; --a-beast: #E4EBF0;
   color-scheme: dark;
 }
 *, *::before, *::after { box-sizing: border-box; }
@@ -145,7 +145,7 @@ h2 { margin: 0; font: 700 clamp(28px, 4.6vw, 42px)/1.06 var(--f-display); letter
 .js .line.in .rail { transform: none; }
 .stations { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .station { position: relative; padding-left: var(--gap); --a: var(--accent); }
-.s-beast { --a: var(--a-beast); } .s-rxn { --a: var(--a-rxn); } .s-pka { --a: var(--a-pka); } .s-pg { --a: var(--a-pg); } .s-tmc { --a: var(--a-tmc); }
+.s-beast { --a: var(--a-beast); } .s-rxn { --a: var(--a-rxn); } .s-pka { --a: var(--a-pka); } .s-pg { --a: var(--a-pg); } .s-tmc { --a: var(--a-tmc); } .s-aa { --a: var(--a-aa); }
 .s-rad { --a: var(--a-rad); } .s-pr { --a: var(--a-pr); } .s-rl { --a: var(--a-rl); }
 .stop { position: absolute; left: calc(var(--rx) - 12px); top: 28px; z-index: 2; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); border: 5px solid var(--a); transition: background .3s ease, transform .3s cubic-bezier(.3,1.6,.5,1); }
 .s-daily .stop { border-color: transparent; background: linear-gradient(var(--surface), var(--surface)) padding-box, var(--rainbow-c) border-box; }
@@ -268,7 +268,7 @@ html:not(.js) #ct-loading { display: none; }
 // What to do with a key: skip it, keep the newer value (lww), keep the higher number per entry (max), keep every
 // entry (union), or keep the play with more answers (progress).
 function KIND(k) {
-  if (!/^(pka2|rxn|pg|tmc1|rl|rad|pr|ctd)\./.test(k)) return 'skip';                    // not an app's record
+  if (!/^(pka2|rxn|pg|tmc1|rl|rad|pr|ctd|aa)\./.test(k)) return 'skip';                    // not an app's record
   if (/\.round\.|\.pt$|^ctd\.past\.|^ctd\.set$/.test(k)) return 'skip';                 // a round or set under way, an open panel
   if (/^ctd\.daily\./.test(k)) return 'progress';                                        // a Daily quiz: its questions and answers
   if (/\.levels(\.|$)|\.seen$|^(ctd\.history|ctd\.late|ctd\.beast|pg\.plan|pg\.removed|rxn\.which|pka2\.acidic|tmc1\.named)$/.test(k)) return 'max';
@@ -467,7 +467,7 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
     <div class="hero-text">
       <p class="eyebrow">Free study apps for chemists</p>
       <h1 id="hero-h">Learn chemistry, <span class="soft">one card at a time.</span></h1>
-      <p class="lede">Named reactions, pKa, protecting groups, metal complexes, radicals, photoredox and reactivity: 7 apps, a new quiz every day. No sign-up: pick a pseudo only if you want the ranking and your progress on every device.</p>
+      <p class="lede">Named reactions, pKa, protecting groups, metal complexes, radicals, photoredox and reactivity: 8 apps, a new quiz every day. No sign-up: pick a pseudo only if you want the ranking and your progress on every device.</p>
       <div class="today" id="today">
         <div class="today-top"><b>Today's quiz</b><span class="today-date" id="today-date"></span></div>
         <p class="today-status" id="today-status">The same questions for everyone today, from every app.</p>
@@ -561,10 +561,20 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
     <span class="st-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13m-5-6 6 6-6 6"/></svg></span>
   </a>
 </li>
+<li class="station s-aa" data-id="aa">
+  <span class="stop" aria-hidden="true"></span>
+  <a class="st-card" href="/amino-acid-learn/amino_acid_learn.html">
+    <span class="st-body"><span class="st-kicker">Stop 6</span>
+      <span class="st-name">Amino Acid Learn</span>
+      <span class="st-about">The 20 amino acids: structures, names, three- and one-letter codes, charge at pH 7 and side-chain class.</span>
+      <span class="st-prog" data-src="[[&quot;aa.levels&quot;, &quot;levels&quot;, 20]]"><span class="bar" aria-hidden="true"><i class="m"></i><i class="l"></i></span><span class="st-txt">20 cards</span></span></span>
+    <span class="st-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13m-5-6 6 6-6 6"/></svg></span>
+  </a>
+</li>
 <li class="station s-tmc" data-id="tmc">
   <span class="stop" aria-hidden="true"></span>
   <a class="st-card" href="/tmc-learn/tmc_learn.html">
-    <span class="st-body"><span class="st-kicker">Stop 6</span>
+    <span class="st-body"><span class="st-kicker">Stop 7</span>
       <span class="st-name">TMC Learn</span>
       <span class="st-about">Electron counting, oxidation states, dⁿ and shapes of transition-metal complexes.</span>
       <span class="st-prog" data-src="[[&quot;tmc1.levels&quot;, &quot;levels&quot;, 246]]"><span class="bar" aria-hidden="true"><i class="m"></i><i class="l"></i></span><span class="st-txt">246 cards</span></span></span>
@@ -574,7 +584,7 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
 <li class="station s-rad" data-id="rad">
   <span class="stop" aria-hidden="true"></span>
   <a class="st-card" href="/radical-learn/radical_learn.html">
-    <span class="st-body"><span class="st-kicker">Stop 7</span>
+    <span class="st-body"><span class="st-kicker">Stop 8</span>
       <span class="st-name">Radical Learn</span>
       <span class="st-about">Nucleophilic and electrophilic radicals, polarity matching, and where radicals add and abstract H.</span>
       <span class="st-prog" data-src="[[&quot;rad.regio.seen&quot;, &quot;seen&quot;, 9], [&quot;rl.radicals.seen&quot;, &quot;seen&quot;, 41]]"><span class="bar" aria-hidden="true"><i class="m"></i><i class="l"></i></span><span class="st-txt">50 questions</span></span></span>
@@ -584,7 +594,7 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
 <li class="station s-pr" data-id="pr">
   <span class="stop" aria-hidden="true"></span>
   <a class="st-card" href="/photoredox-learn/photoredox_learn.html">
-    <span class="st-body"><span class="st-kicker">Stop 8</span>
+    <span class="st-body"><span class="st-kicker">Stop 9</span>
       <span class="st-name">Photoredox Learn</span>
       <span class="st-about">Redox potentials of photocatalysts, reagents and substrates, electron transfer and photoredox cycles.</span>
       <span class="st-prog" data-src="[[&quot;pr.levels&quot;, &quot;levels&quot;, 143]]"><span class="bar" aria-hidden="true"><i class="m"></i><i class="l"></i></span><span class="st-txt">143 cards</span></span></span>
@@ -594,7 +604,7 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
 <li class="station s-rl" data-id="rl">
   <span class="stop" aria-hidden="true"></span>
   <a class="st-card" href="/reactivity-learn/reactivity_learn.html">
-    <span class="st-body"><span class="st-kicker">Stop 9</span>
+    <span class="st-body"><span class="st-kicker">Stop 10</span>
       <span class="st-name">Reactivity Learn <span class="st-tag">Nu/E</span></span>
       <span class="st-about">Mayr nucleophilicity and electrophilicity, the most reactive atom, and regioselectivity.</span>
       <span class="st-prog" data-src="[[&quot;rl.levels&quot;, &quot;levels&quot;, 240]]"><span class="bar" aria-hidden="true"><i class="m"></i><i class="l"></i></span><span class="st-txt">240 cards</span></span></span>
@@ -623,7 +633,7 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
       <p class="how-browser">Install it once and every app is on your phone under one icon. It opens full screen and works without internet.</p>
       <p class="installed-msg">You are using the installed ChemTrain. Every app is kept on this device, so it works without internet.</p>
       <ul class="perks">
-        <li>Every app and the daily quiz, offline (about 22 MB)</li>
+        <li>Every app and the daily quiz, offline (about 23 MB)</li>
         <li>Free, no ads; a pseudo is optional</li>
         <li>Your progress stays on your device, unless you pick a pseudo and let it follow you</li>
         <li>Updates arrive by themselves when you are online</li>
@@ -962,7 +972,7 @@ setTimeout(function () { var r = document.documentElement, l = document.getEleme
 })();
 </script>
 <script>
-const DATA = {"firstDay": "2026-10-21", "daily": "/chemtrain-daily/chemtrain_daily.html", "pages": ["/chemtrain-daily/chemtrain_daily.html", "/reaction-learn/reaction_learn.html", "/pka-learn/pka_learn.html", "/pg-learn/pg_learn.html", "/tmc-learn/tmc_learn.html", "/radical-learn/radical_learn.html", "/photoredox-learn/photoredox_learn.html", "/reactivity-learn/reactivity_learn.html"], "size": "22 MB"};
+const DATA = {"firstDay": "2026-10-21", "daily": "/chemtrain-daily/chemtrain_daily.html", "pages": ["/chemtrain-daily/chemtrain_daily.html", "/reaction-learn/reaction_learn.html", "/pka-learn/pka_learn.html", "/pg-learn/pg_learn.html", "/amino-acid-learn/amino_acid_learn.html", "/tmc-learn/tmc_learn.html", "/radical-learn/radical_learn.html", "/photoredox-learn/photoredox_learn.html", "/reactivity-learn/reactivity_learn.html"], "size": "23 MB"};
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const root = document.documentElement;
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;

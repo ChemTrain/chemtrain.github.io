@@ -30,7 +30,7 @@
   --logo-tile: #FFFFFF; --bg: #EDF1F4; --surface: #FFFFFF; --paper: #F6F8FA; --ink: #15212B; --muted: #566472; --line: #D3DBE2;
   --accent: #0D5C78; --accent-ink: #FFFFFF; --accent-soft: #DAEAF1; --good: #1B7548; --good-soft: #DCF0E4;
   --rail: #9AA8B4; --sleeper: #C9D2DA; --shadow: rgb(21 33 43 / .28); --halo: transparent;
-  --a-pka: #2a78d6; --a-rxn: #eb6834; --a-pg: #1baf7a; --a-tmc: #6250d6; --a-rl: #e34948; --a-pr: #0f94a8; --a-rad: #d99a00; --a-beast: #15212B;
+  --a-pka: #2a78d6; --a-rxn: #eb6834; --a-pg: #1baf7a; --a-tmc: #6250d6; --a-rl: #e34948; --a-pr: #0f94a8; --a-rad: #d99a00; --a-aa: #c2418a; --a-beast: #15212B;
   --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
   --f-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -43,7 +43,7 @@
     --logo-tile: #E6ECF0; --bg: #0D1318; --surface: #151D24; --paper: #10171D; --ink: #E4EBF0; --muted: #94A3B0; --line: #27333D;
     --accent: #5DB7D5; --accent-ink: #08212B; --accent-soft: #173341; --good: #5FC88F; --good-soft: #143224;
     --rail: #5B6B78; --sleeper: #2C3943; --shadow: rgb(0 0 0 / .55); --halo: rgb(230 236 240 / .2);
-    --a-pka: #3987e5; --a-rxn: #d95926; --a-pg: #199e70; --a-tmc: #9085e9; --a-rl: #e66767; --a-pr: #1f9fb3; --a-rad: #c98500; --a-beast: #E4EBF0;
+    --a-pka: #3987e5; --a-rxn: #d95926; --a-pg: #199e70; --a-tmc: #9085e9; --a-rl: #e66767; --a-pr: #1f9fb3; --a-rad: #c98500; --a-aa: #d9579f; --a-beast: #E4EBF0;
     color-scheme: dark;
   }
 }
@@ -51,7 +51,7 @@
   --logo-tile: #E6ECF0; --bg: #0D1318; --surface: #151D24; --paper: #10171D; --ink: #E4EBF0; --muted: #94A3B0; --line: #27333D;
   --accent: #5DB7D5; --accent-ink: #08212B; --accent-soft: #173341; --good: #5FC88F; --good-soft: #143224;
   --rail: #5B6B78; --sleeper: #2C3943; --shadow: rgb(0 0 0 / .55); --halo: rgb(230 236 240 / .2);
-  --a-pka: #3987e5; --a-rxn: #d95926; --a-pg: #199e70; --a-tmc: #9085e9; --a-rl: #e66767; --a-pr: #1f9fb3; --a-rad: #c98500; --a-beast: #E4EBF0;
+  --a-pka: #3987e5; --a-rxn: #d95926; --a-pg: #199e70; --a-tmc: #9085e9; --a-rl: #e66767; --a-pr: #1f9fb3; --a-rad: #c98500; --a-aa: #d9579f; --a-beast: #E4EBF0;
   color-scheme: dark;
 }
 *, *::before, *::after { box-sizing: border-box; }
@@ -144,7 +144,7 @@ h2 { margin: 0; font: 700 clamp(28px, 4.6vw, 42px)/1.06 var(--f-display); letter
 .js .line.in .rail { transform: none; }
 .stations { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .station { position: relative; padding-left: var(--gap); --a: var(--accent); }
-.s-beast { --a: var(--a-beast); } .s-rxn { --a: var(--a-rxn); } .s-pka { --a: var(--a-pka); } .s-pg { --a: var(--a-pg); } .s-tmc { --a: var(--a-tmc); }
+.s-beast { --a: var(--a-beast); } .s-rxn { --a: var(--a-rxn); } .s-pka { --a: var(--a-pka); } .s-pg { --a: var(--a-pg); } .s-tmc { --a: var(--a-tmc); } .s-aa { --a: var(--a-aa); }
 .s-rad { --a: var(--a-rad); } .s-pr { --a: var(--a-pr); } .s-rl { --a: var(--a-rl); }
 .stop { position: absolute; left: calc(var(--rx) - 12px); top: 28px; z-index: 2; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); border: 5px solid var(--a); transition: background .3s ease, transform .3s cubic-bezier(.3,1.6,.5,1); }
 .s-daily .stop { border-color: transparent; background: linear-gradient(var(--surface), var(--surface)) padding-box, var(--rainbow-c) border-box; }
@@ -296,7 +296,7 @@ html:not(.js) #ct-loading { display: none; }
 // What to do with a key: skip it, keep the newer value (lww), keep the higher number per entry (max), keep every
 // entry (union), or keep the play with more answers (progress).
 function KIND(k) {
-  if (!/^(pka2|rxn|pg|tmc1|rl|rad|pr|ctd)\./.test(k)) return 'skip';                    // not an app's record
+  if (!/^(pka2|rxn|pg|tmc1|rl|rad|pr|ctd|aa)\./.test(k)) return 'skip';                    // not an app's record
   if (/\.round\.|\.pt$|^ctd\.past\.|^ctd\.set$/.test(k)) return 'skip';                 // a round or set under way, an open panel
   if (/^ctd\.daily\./.test(k)) return 'progress';                                        // a Daily quiz: its questions and answers
   if (/\.levels(\.|$)|\.seen$|^(ctd\.history|ctd\.late|ctd\.beast|pg\.plan|pg\.removed|rxn\.which|pka2\.acidic|tmc1\.named)$/.test(k)) return 'max';
