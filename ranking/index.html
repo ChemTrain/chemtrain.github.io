@@ -81,9 +81,16 @@ button { font: inherit; color: inherit; }
 .toplinks .chip.acct { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); max-width: 11em; overflow: hidden; text-overflow: ellipsis; }
 .toplinks .chip.acct:hover { background: var(--surface); color: var(--ink); filter: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
 .toplinks .chip.acct.in::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--good); transform: translateY(-1px); }
+/* share ChemTrain: the phone's share sheet, else the link copied */
+.toplinks .chip.share { display: inline-flex; align-items: center; gap: 6px; background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+.toplinks .chip.share:hover { background: var(--surface); color: var(--ink); filter: none; box-shadow: inset 0 0 0 1.5px var(--accent); }
+.toplinks .chip.share svg { width: 15px; height: 15px; flex: none; }
+@media (max-width: 600px) { .toplinks .chip.share { padding: 8px 9px; } .toplinks .chip.share .share-t { display: none; } }
 .netchip { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); color: var(--muted); }
 @media (max-width: 600px) { .toplinks .wide { display: none; } .wordmark { font-size: 21px; } }
 .standalone .toplinks .install-link { display: none; }
+@media (max-width: 400px) { .toplinks { gap: 3px; } .toplinks a, .toplinks button { padding: 8px 9px; } .brand { gap: 9px; } .wordmark { font-size: 19px; } }
+@media (max-width: 350px) { .wordmark { display: none; } }
 
 /* ---------- hero ---------- */
 .hero { display: grid; gap: 22px; align-items: center; padding: 20px 0 40px; }
